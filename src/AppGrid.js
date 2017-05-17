@@ -131,12 +131,21 @@ export default class AppGrid extends Component {
           const iconPositions = this.getIconPositions();
           const currentIcon = iconPositions[currIcon];
           const draggedIcon = { x1: currentIcon.x1+dx, x2: currentIcon.x2+dx, y1: currentIcon.y1+dy, y2: currentIcon.y2+dy };
-          const potentialNewPlace = iconPositions.find(icon => {
+          let potentialNewPlace = iconPositions.find(icon => {
             return (
               ((draggedIcon.x1 >= icon.x1 && draggedIcon.x1 <= icon.x2) || (draggedIcon.x2 >= icon.x1 && draggedIcon.x2 <= icon.x2)) &&
               ((draggedIcon.y1 >= icon.y1 && draggedIcon.y1 <= icon.y2) || (draggedIcon.y2 >= icon.y1 && draggedIcon.y2 <= icon.y2))
             );
           });
+          const potentialEmptySpace = this.getGridPositions().slice(iconPositions.length).find(space => {
+            return (
+              ((draggedIcon.x1 >= space.x1 && draggedIcon.x1 <= space.x2) || (draggedIcon.x2 >= space.x1 && draggedIcon.x2 <= space.x2)) &&
+              ((draggedIcon.y1 >= space.y1 && draggedIcon.y1 <= space.y2) || (draggedIcon.y2 >= space.y1 && draggedIcon.y2 <= space.y2))
+            );
+          });
+          if (!potentialNewPlace && potentialEmptySpace) {
+            potentialNewPlace = iconPositions[iconPositions.length - 1];
+          }
           if (potentialNewPlace && potentialNewPlace.idx !== currentIcon.idx) {
             const newIdx = potentialNewPlace.idx;
             const currentId = this.state.apps[currentIcon.idx].id;
