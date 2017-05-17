@@ -41,8 +41,9 @@ export default class AppGrid extends Component {
 
   wiggle: Animated.Value;
   dragPosition: Animated.ValueXY;
-  _panResponder: PanResponder;
+  appPositions: { [id: string]: Animated.ValueXY };
 
+  _panResponder: PanResponder;
   _grantedAt: ?Date;
   _startEditingTimeout: any;
   _xCorrection: number;
@@ -63,6 +64,11 @@ export default class AppGrid extends Component {
   componentWillMount() {
     this.wiggle = new Animated.Value(0);
     this.dragPosition = new Animated.ValueXY();
+
+    this.appPositions = {};
+    this.state.apps.forEach(app => {
+      this.appPositions[app.id] = new Animated.ValueXY();
+    });
 
     let prev = 0;
     const cycleAnimation = () => {
@@ -166,6 +172,22 @@ export default class AppGrid extends Component {
     });
   }
 
+  componentDidUpdate() {
+    const positions = this.getGridPositions();
+    Animated.parallel(
+      this.state.apps.map((app, idx) => {
+        const { x1, y1 } = positions[idx];
+        if (this.state.currentIcon === idx) {
+          this.appPositions[app.id].setValue({ x: x1, y: y1 });
+          return null;
+        }
+        return Animated.spring(this.appPositions[app.id], {
+          toValue: { x: x1, y: y1 },
+        });
+      }).filter(a => a)
+    ).start();
+  }
+
   handleLayout = (e: Object) => {
     const { height, width } = e.nativeEvent.layout;
     this.setState({ height, width });
@@ -184,7 +206,7 @@ export default class AppGrid extends Component {
     const padTotal = this.state.width - (perLine * ITEM_WIDTH);
     const padItem = padTotal / (perLine-1);
 
-    return { ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem };
+    return { PER_ROW, NUM_ROWS, ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem };
   }
 
   getIconPositions() {
@@ -201,15 +223,32 @@ export default class AppGrid extends Component {
     });
   }
 
+  getGridPositions() {
+    const { NUM_ROWS, ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem } = this.getSizes();
+    const totalSize = NUM_ROWS * perLine;
+
+    return [...Array(10)].map((_, idx) => {
+      const lineIdx = Math.floor(idx / perLine);
+      const inLineIdx = idx % perLine;
+
+      const top = lineIdx * ITEM_HEIGHT;
+      const left = inLineIdx * (ITEM_WIDTH + padItem);
+
+      return { idx, y1: top, y2: top+ITEM_HEIGHT, x1: left, x2: left+ITEM_WIDTH };
+    });
+  }
+
   render() {
     const { ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem } = this.getSizes();
 
     const { apps } = this.state;
     const { isEditing } = this.props;
 
+    const positions = this.getGridPositions();
+
     return (
       <View style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 10 }} {...this._panResponder.panHandlers}>
-        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', backgroundColor: 'transparent' }} onLayout={this.handleLayout}>
+        <View style={{ flex: 1, backgroundColor: 'transparent', position: 'relative' }} onLayout={this.handleLayout}>
           {apps.map((app, idx) => {
             const isLast = (idx+1) % perLine === 0;
             const rotations = [
@@ -233,8 +272,18 @@ export default class AppGrid extends Component {
                 ] : []),
               ],
             };
+            const { x, y } = this.appPositions[app.id];
+            const itemStyle = {
+              flex: 0,
+              zIndex: this.state.currentIcon === idx ? 2 : 1,
+              position: 'absolute',
+              top: y,
+              left: x,
+              width: ITEM_WIDTH,
+              height: ITEM_HEIGHT,
+            };
             return (
-              <Animated.View key={app.id} style={[{ flex: 0, zIndex: this.state.currentIcon === idx ? 2 : 1, width: ITEM_WIDTH, height: ITEM_HEIGHT, marginRight: isLast ? 0 : padItem }, isEditing && animatedStyle]}>
+              <Animated.View key={app.id} style={[itemStyle, isEditing && animatedStyle]}>
                 <AppIcon
                   iconSize={ICON_SIZE}
                   iconUrl={app.icon}
