@@ -40,6 +40,7 @@ export default class AppGrid extends Component {
   };
 
   wiggle: Animated.Value;
+  pressing: Animated.Value;
   dragPosition: Animated.ValueXY;
   appPositions: { [id: string]: Animated.ValueXY };
 
@@ -63,6 +64,7 @@ export default class AppGrid extends Component {
 
   componentWillMount() {
     this.wiggle = new Animated.Value(0);
+    this.pressing = new Animated.Value(0);
     this.dragPosition = new Animated.ValueXY();
 
     this.appPositions = {};
@@ -173,10 +175,12 @@ export default class AppGrid extends Component {
         this._startEditingTimeout = null;
         this._xCorrection = 0;
         this._yCorrection = 0;
-        this.setState({ currentIcon: null });
-        Animated.spring(this.dragPosition, {
+        Animated.timing(this.dragPosition, {
           toValue: { x: 0, y: 0 },
-        }).start();
+          duration: 100,
+        }).start(() => {
+          this.setState({ currentIcon: null });
+        });
       },
     });
   }
@@ -195,6 +199,10 @@ export default class AppGrid extends Component {
         });
       }).filter(a => a)
     ).start();
+
+    Animated.spring(this.pressing, {
+      toValue: this.state.currentIcon != null ? 1 : 0,
+    }).start();
   }
 
   handleLayout = (e: Object) => {
@@ -269,17 +277,31 @@ export default class AppGrid extends Component {
             ];
             const animatedStyle = {
               transform: [
-                {
-                  rotate: this.wiggle.interpolate({
-                    inputRange: [-1, -0.5, 0, 0.5, 1],
-                    outputRange: rotations[idx % rotations.length],
-                  }),
-                },
+                ...(this.state.currentIcon !== idx ? [
+                  {
+                    rotate: this.wiggle.interpolate({
+                      inputRange: [-1, -0.5, 0, 0.5, 1],
+                      outputRange: rotations[idx % rotations.length],
+                    }),
+                  },
+                ] : []),
                 ...(this.state.currentIcon === idx ? [
                   { translateX: this.dragPosition.x },
                   { translateY: this.dragPosition.y },
+                  {
+                    scale: this.pressing.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.15],
+                    }),
+                  },
                 ] : []),
               ],
+              ...(this.state.currentIcon === idx ? {
+                opacity: this.pressing.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.7],
+                }),
+              } : {}),
             };
             const { x, y } = this.appPositions[app.id];
             const itemStyle = {
