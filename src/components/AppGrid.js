@@ -17,6 +17,10 @@ import { doesOverlap, isPointInsideRect, moveRect } from '../lib/2d';
 
 import AppIcon from './AppIcon';
 
+const MARGIN_TOP = 20;
+const PAD_HORIZONTAL = 10;
+const PAD_VERTICAL = 10;
+
 type App = { id: string, icon: string, name: string };
 
 type Props = {
@@ -86,6 +90,13 @@ export default class AppGrid extends Component {
       return { dx: gestureState.dx + this._xCorrection, dy: gestureState.dy + this._yCorrection };
     };
 
+    const getCorrectedEventCoords = (evt) => {
+      const pageX = evt.nativeEvent.pageX - PAD_HORIZONTAL;
+      const pageY = evt.nativeEvent.pageY - PAD_VERTICAL - MARGIN_TOP;
+
+      return { pageX, pageY };
+    };
+
     this._panResponder = PanResponder.create({
       onStartShouldSetPanResponder: (evt, gestureState) => true,
       onStartShouldSetPanResponderCapture: (evt, gestureState) => true,
@@ -96,12 +107,14 @@ export default class AppGrid extends Component {
         this._grantedAt = new Date;
         this._xCorrection = 0;
         this._yCorrection = 0;
+
         this.dragPosition.setValue({ x: 0, y: 0 });
-        const iconPositions = this.getIconPositions();
-        const pageX = evt.nativeEvent.pageX - 10;
-        const pageY = evt.nativeEvent.pageY - 10 - 20;
-        const currentIcon = iconPositions.find(pos => isPointInsideRect({ x: pageX, y: pageY }, pos));
+
+        const { pageX, pageY } = getCorrectedEventCoords(evt);
+        const currentIcon = this.getIconAtPoint(pageX, pageY);
+
         if (currentIcon && !this.props.isEditing) {
+          // if pressing for 300ms, go into editing mode
           this._startEditingTimeout = setTimeout(() => {
             this.props.onStartEditing();
             this.setState({ currentIcon: currentIcon.idx });
@@ -123,25 +136,27 @@ export default class AppGrid extends Component {
         if (currIcon != null) {
           const { dx, dy } = getCorrectedGestureState(gestureState);
           this.dragPosition.setValue({ x: dx, y: dy });
+
           const iconPositions = this.getIconPositions();
+
           const currentIcon = iconPositions[currIcon];
           const draggedIcon = moveRect(currentIcon, dx, dy);
+
           let potentialNewPlace = iconPositions.find(icon => doesOverlap(draggedIcon, icon));
+
+          // if dragging into empty space after all the icons, move to the last slot
           const potentialEmptySpace = this.getGridPositions().slice(iconPositions.length).find(space => doesOverlap(draggedIcon, space));
           if (!potentialNewPlace && potentialEmptySpace) {
             potentialNewPlace = iconPositions[iconPositions.length - 1];
           }
           if (potentialNewPlace && potentialNewPlace.idx !== currentIcon.idx) {
             const newIdx = potentialNewPlace.idx;
-            const currentId = this.props.apps[currentIcon.idx].id;
-            const ids = this.props.apps.map(app => app.id);
-            const newIds = moveToIdx(ids, currentIcon.idx, newIdx);
-            this._xCorrection = this._xCorrection + currentIcon.x1 - potentialNewPlace.x1;
-            this._yCorrection = this._yCorrection + currentIcon.y1 - potentialNewPlace.y1;
-            // $FlowFixMe
-            const newApps: Array<App> = newIds.map(id => this.props.apps.find(app => app.id === id));
+            const newApps = moveToIdx(this.props.apps, currentIcon.idx, newIdx);
             this.props.onRearrangeApps(newApps);
             this.setState({ currentIcon: newIdx });
+
+            this._xCorrection = this._xCorrection + currentIcon.x1 - potentialNewPlace.x1;
+            this._yCorrection = this._yCorrection + currentIcon.y1 - potentialNewPlace.y1;
             const { dx, dy } = getCorrectedGestureState(gestureState);
             this.dragPosition.setValue({ x: dx, y: dy });
           }
@@ -152,11 +167,13 @@ export default class AppGrid extends Component {
         this._grantedAt = null;
         clearTimeout(this._startEditingTimeout);
         this._startEditingTimeout = null;
+
         this._xCorrection = 0;
         this._yCorrection = 0;
+
         Animated.timing(this.dragPosition, {
           toValue: { x: 0, y: 0 },
-          duration: 100,
+          duration: 200,
         }).start(() => {
           this.setState({ currentIcon: null });
         });
@@ -189,6 +206,10 @@ export default class AppGrid extends Component {
     this.setState({ height, width });
   };
 
+  getIconAtPoint(x: number, y: number) {
+    return this.getIconPositions().find(pos => isPointInsideRect({ x, y }, pos));
+  }
+
   getSizes() {
     const PER_ROW = 4;
     const NUM_ROWS = 6;
@@ -213,7 +234,7 @@ export default class AppGrid extends Component {
       const inLineIdx = idx % perLine;
 
       const top = lineIdx * ITEM_HEIGHT;
-      const left = inLineIdx * (ITEM_WIDTH + padItem) + 20/2;
+      const left = inLineIdx * (ITEM_WIDTH + padItem) + PAD_HORIZONTAL;
 
       return { idx, y1: top, y2: top+ICON_SIZE, x1: left, x2: left+ICON_SIZE };
     });
@@ -242,7 +263,7 @@ export default class AppGrid extends Component {
     const positions = this.getGridPositions();
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 10 }} {...this._panResponder.panHandlers}>
+      <View style={{ flex: 1, paddingHorizontal: PAD_HORIZONTAL, paddingVertical: PAD_VERTICAL }} {...this._panResponder.panHandlers}>
         <View style={{ flex: 1, backgroundColor: 'transparent', position: 'relative' }} onLayout={this.handleLayout}>
           {apps.map((app, idx) => {
             const rotations = [
