@@ -12,6 +12,8 @@ import {
 import AppGrid from './src/AppGrid';
 import HomeButton from './src/HomeButton';
 
+type App = { id: string, icon: string, name: string };
+
 export default class Fallboard extends Component {
   state = {
     backgroundImage: 'https://cdn0.vox-cdn.com/uploads/chorus_image/image/50846253/24961941116_faabb955c3_k.0.0.jpg',
@@ -36,6 +38,8 @@ export default class Fallboard extends Component {
   startEditing = () => this.setState({ isEditing: true });
   stopEditing = () => this.setState({ isEditing: false });
 
+  handleRearrange = (newApps: Array<App>) => this.setState({ apps: newApps });
+
   handleHome = () => {
     this.stopEditing();
   };
@@ -55,6 +59,7 @@ export default class Fallboard extends Component {
           isEditing={this.state.isEditing}
           onStartEditing={this.startEditing}
           onStopEditing={this.stopEditing}
+          onRearrangeApps={this.handleRearrange}
         />
 
         <HomeButton onPress={this.handleHome} />

@@ -23,17 +23,19 @@ const AppIcon = ({ iconUrl, iconSize, appName }: { iconUrl: string, iconSize: nu
   </View>
 );
 
+type App = { id: string, icon: string, name: string };
+
 type Props = {
-  apps: Array<{ id: string, icon: string, name: string }>;
+  apps: Array<App>;
   isEditing: bool;
   onStartEditing: () => void;
   onStopEditing: () => void;
+  onRearrangeApps: (newApps: Array<App>) => void;
 };
 export default class AppGrid extends Component {
   props: Props;
 
   state: {
-    apps: Array<{ id: string, icon: string, name: string }>;
     width: number,
     height: number,
     currentIcon: ?number,
@@ -53,7 +55,6 @@ export default class AppGrid extends Component {
   constructor(props: Props) {
     super(props);
     this.state = {
-      apps: props.apps,
       width: 100,
       height: 100,
       currentIcon: null,
@@ -68,7 +69,7 @@ export default class AppGrid extends Component {
     this.dragPosition = new Animated.ValueXY();
 
     this.appPositions = {};
-    this.state.apps.forEach(app => {
+    this.props.apps.forEach(app => {
       this.appPositions[app.id] = new Animated.ValueXY();
     });
 
@@ -150,8 +151,8 @@ export default class AppGrid extends Component {
           }
           if (potentialNewPlace && potentialNewPlace.idx !== currentIcon.idx) {
             const newIdx = potentialNewPlace.idx;
-            const currentId = this.state.apps[currentIcon.idx].id;
-            const ids = this.state.apps.map(app => app.id);
+            const currentId = this.props.apps[currentIcon.idx].id;
+            const ids = this.props.apps.map(app => app.id);
             if (newIdx < currentIcon.idx) {
               ids.splice(currentIcon.idx, 1);
               ids.splice(newIdx, 0, currentId);
@@ -161,8 +162,10 @@ export default class AppGrid extends Component {
             }
             this._xCorrection = this._xCorrection + currentIcon.x1 - potentialNewPlace.x1;
             this._yCorrection = this._yCorrection + currentIcon.y1 - potentialNewPlace.y1;
-            const newApps = ids.map(id => this.state.apps.find(app => app.id === id)); // $FlowFixMe
-            this.setState({ apps: newApps, currentIcon: newIdx });
+            // $FlowFixMe
+            const newApps: Array<App> = ids.map(id => this.props.apps.find(app => app.id === id));
+            this.props.onRearrangeApps(newApps);
+            this.setState({ currentIcon: newIdx });
             const { dx, dy } = getCorrectedGestureState(gestureState);
             this.dragPosition.setValue({ x: dx, y: dy });
           }
@@ -188,7 +191,7 @@ export default class AppGrid extends Component {
   componentDidUpdate() {
     const positions = this.getGridPositions();
     Animated.parallel(
-      this.state.apps.map((app, idx) => {
+      this.props.apps.map((app, idx) => {
         const { x1, y1 } = positions[idx];
         if (this.state.currentIcon === idx) {
           this.appPositions[app.id].setValue({ x: x1, y: y1 });
@@ -229,7 +232,7 @@ export default class AppGrid extends Component {
   getIconPositions() {
     const { ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem } = this.getSizes();
 
-    return this.state.apps.map((_, idx) => {
+    return this.props.apps.map((_, idx) => {
       const lineIdx = Math.floor(idx / perLine);
       const inLineIdx = idx % perLine;
 
@@ -258,8 +261,7 @@ export default class AppGrid extends Component {
   render() {
     const { ITEM_WIDTH, ITEM_HEIGHT, ICON_SIZE, perLine, padItem } = this.getSizes();
 
-    const { apps } = this.state;
-    const { isEditing } = this.props;
+    const { apps, isEditing } = this.props;
 
     const positions = this.getGridPositions();
 
