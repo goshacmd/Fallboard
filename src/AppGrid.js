@@ -12,16 +12,7 @@ import {
   PanResponder,
 } from 'react-native';
 
-const AppIcon = ({ iconUrl, iconSize, appName }: { iconUrl: string, iconSize: number, appName: string }) => (
-  <View style={{ alignItems: 'center' }}>
-    <View style={{ borderRadius: 10, marginBottom: 5, shadowColor: '#222', shadowRadius: 4, shadowOpacity: 0.2, shadowOffset: { height: 2 } }}>
-      <Image source={{ uri: iconUrl }} style={{ height: iconSize, width: iconSize, borderRadius: 10 }} />
-    </View>
-    <Text style={{ fontSize: 14, fontWeight: '500', color: '#fff', shadowColor: '#222', shadowRadius: 4, shadowOpacity: 0.8, shadowOffset: { height: 1 } }}>
-      {appName}
-    </Text>
-  </View>
-);
+import AppIcon from './AppIcon';
 
 function range(x: number): Array<void> {
   return [...Array(x)];
