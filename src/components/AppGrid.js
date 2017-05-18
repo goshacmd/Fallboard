@@ -12,41 +12,10 @@ import {
   PanResponder,
 } from 'react-native';
 
+import { range, moveToIdx } from '../lib/array';
+import { doesOverlap, isPointInsideRect, moveRect } from '../lib/2d';
+
 import AppIcon from './AppIcon';
-
-function range(x: number): Array<void> {
-  return [...Array(x)];
-}
-
-type Point =  { x: number, y: number };
-type Rect = { x1: number, x2: number, y1: number, y2: number };
-function doesOverlap(a: Rect, b: Rect): bool {
-  return (
-    ((a.x1 >= b.x1 && a.x1 <= b.x2) || (a.x2 >= b.x1 && a.x2 <= b.x2)) &&
-    ((a.y1 >= b.y1 && a.y1 <= b.y2) || (a.y2 >= b.y1 && a.y2 <= b.y2))
-  );
-}
-
-function isPointInsideRect(point: Point, rect: Rect): bool {
-  return point.x >= rect.x1 && point.x <= rect.x2 && point.y >= rect.y1 && point.y <= rect.y2;
-}
-
-function moveRect(rect: Rect, dx: number, dy: number): Rect {
-  return { x1: rect.x1 + dx, x2: rect.x2 + dx, y1: rect.y1 + dy, y2: rect.y2 + dy };
-}
-
-function moveToIdx<T>(ary: Array<T>, sourceIdx: number, destinationIdx: number): Array<T> {
-  const ret = ary.slice();
-  const item = ary[sourceIdx];
-  if (destinationIdx < sourceIdx) {
-    ret.splice(sourceIdx, 1);
-    ret.splice(destinationIdx, 0, item);
-  } else {
-    ret.splice(destinationIdx+1, 0, item);
-    ret.splice(sourceIdx, 1);
-  }
-  return ret;
-}
 
 type App = { id: string, icon: string, name: string };
 

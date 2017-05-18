@@ -9,8 +9,8 @@ import {
   StatusBar,
 } from 'react-native';
 
-import AppGrid from './src/AppGrid';
-import HomeButton from './src/HomeButton';
+import AppGrid from './src/components/AppGrid';
+import HomeButton from './src/components/HomeButton';
 
 type App = { id: string, icon: string, name: string };
 
